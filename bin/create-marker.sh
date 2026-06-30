@@ -21,9 +21,14 @@ dir="$(notify_marker_dir)" || exit 0
 
 sid="${CLAUDE_CODE_SESSION_ID:-}"
 
-# Per-session mute: skip if this session is paused.
-if [ -n "$sid" ] &&
-    grep -qxF "$sid" "$dir/.paused-sessions" 2>/dev/null; then
+# Explicit per-session pause always wins.
+if [ -n "$sid" ] && notify_marker_listed "$dir/.paused-sessions" "$sid"; then
+    exit 0
+fi
+
+# Paused-by-default: emit only for sessions that have explicitly resumed.
+if notify_marker_truthy "${CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT:-}" &&
+    ! { [ -n "$sid" ] && notify_marker_listed "$dir/.active-sessions" "$sid"; }; then
     exit 0
 fi
 

@@ -3,10 +3,15 @@
 # notify-marker.sh
 # Pause/resume marker creation for the CURRENT Claude Code session.
 #
-# Backed by a .paused-sessions file (one session id per line) in the marker
-# directory. Invoked by the /claude-code-notify-marker:pause and :resume slash
-# commands. Idempotent: pausing an already-paused session (or resuming one that
-# isn't paused) is a harmless no-op.
+# Backed by two list files in the marker directory (one session id per line):
+#   .paused-sessions  - sessions explicitly paused
+#   .active-sessions  - sessions explicitly resumed
+# An explicit entry always wins over the default. The default is controlled by
+# CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT (truthy = paused-by-default, so a session
+# stays silent until it explicitly resumes).
+#
+# Invoked by the /notify-marker:pause and :resume slash commands.
+# Idempotent: repeating pause/resume for a session is a harmless no-op.
 #
 # Usage: notify-marker.sh {pause|resume|status}
 
@@ -15,7 +20,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 action="$1"
 
 dir="$(notify_marker_dir)" || {
-    echo "notify-marker: disabled — CC_NOTIFY_MARKER_DIR is not set, nothing to pause."
+    echo "notify-marker: disabled — CC_NOTIFY_MARKER_DIR is not set, nothing to do."
     exit 1
 }
 
@@ -26,32 +31,30 @@ sid="${CLAUDE_CODE_SESSION_ID:-}"
 }
 
 mkdir -p "$dir" 2>/dev/null
-state="$dir/.paused-sessions"
-
-is_paused() { grep -qxF "$sid" "$state" 2>/dev/null; }
+paused="$dir/.paused-sessions"
+active="$dir/.active-sessions"
 
 case "$action" in
     pause)
-        if is_paused; then
-            echo "notify-marker: already paused for this session ($sid)."
-        else
-            echo "$sid" >> "$state"
-            echo "notify-marker: paused for this session ($sid)."
-        fi
+        notify_marker_list_remove "$active" "$sid"
+        notify_marker_list_add "$paused" "$sid"
+        echo "notify-marker: paused for this session ($sid)."
         ;;
     resume)
-        if is_paused; then
-            # Note: grep -v exits non-zero when the result is empty (last entry
-            # removed), so do not gate the mv on its exit status.
-            grep -vxF "$sid" "$state" > "$state.tmp" 2>/dev/null
-            mv "$state.tmp" "$state"
-            echo "notify-marker: resumed for this session ($sid)."
-        else
-            echo "notify-marker: not paused for this session ($sid)."
-        fi
+        notify_marker_list_remove "$paused" "$sid"
+        notify_marker_list_add "$active" "$sid"
+        echo "notify-marker: resumed for this session ($sid)."
         ;;
     status)
-        if is_paused; then echo "paused"; else echo "active"; fi
+        if notify_marker_listed "$paused" "$sid"; then
+            echo "paused"
+        elif notify_marker_listed "$active" "$sid"; then
+            echo "active"
+        elif notify_marker_truthy "${CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT:-}"; then
+            echo "paused (default)"
+        else
+            echo "active (default)"
+        fi
         ;;
     *)
         echo "usage: notify-marker.sh {pause|resume|status}"

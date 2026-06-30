@@ -85,7 +85,21 @@ sessions and without restarting, use the bundled slash commands:
 | `/notify-marker:pause`  | Stop emitting markers for this session    |
 | `/notify-marker:resume` | Resume emitting markers for this session  |
 
-These add/remove the session's id (`CLAUDE_CODE_SESSION_ID`) in a
-`.paused-sessions` file inside the marker directory; `create-marker.sh` skips
-any session listed there. The watcher ignores dotfiles, so this state file is
-never treated as an event.
+These record the session's id (`CLAUDE_CODE_SESSION_ID`) in `.paused-sessions` /
+`.active-sessions` files inside the marker directory; `create-marker.sh` honors
+them. The watcher ignores dotfiles, so this state is never treated as an event.
+
+### Paused by default (opt-in per session)
+
+By default a session emits unless explicitly paused. To flip it — keep the
+plugin enabled everywhere but have sessions stay silent until you opt them in —
+set `CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT` to a truthy value (`1`/`true`/`yes`/`on`):
+
+```bash
+CC_NOTIFY_MARKER_DIR="/path/to/some/dir" \
+  CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1 claude
+```
+
+Now every session is silent until you run `/notify-marker:resume`, and
+`/notify-marker:pause` returns it to silent. (An explicit pause/resume always
+overrides the default.)
