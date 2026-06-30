@@ -83,7 +83,7 @@ sessions and without restarting, use the bundled slash commands:
 | Command                             | Effect                                    |
 | ----------------------------------- | ----------------------------------------- |
 | `/notify-marker:pause`  | Stop emitting markers for this session    |
-| `/notify-marker:resume` | Resume emitting markers for this session  |
+| `/notify-marker:unpause` | Resume emitting markers for this session  |
 
 These record the session's id (`CLAUDE_CODE_SESSION_ID`) in `.paused-sessions` /
 `.active-sessions` files inside the marker directory; `create-marker.sh` honors
@@ -100,6 +100,6 @@ CC_NOTIFY_MARKER_DIR="/path/to/some/dir" \
   CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1 claude
 ```
 
-Now every session is silent until you run `/notify-marker:resume`, and
-`/notify-marker:pause` returns it to silent. (An explicit pause/resume always
+Now every session is silent until you run `/notify-marker:unpause`, and
+`/notify-marker:pause` returns it to silent. (An explicit pause/unpause always
 overrides the default.)

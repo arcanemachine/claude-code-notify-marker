@@ -10,10 +10,10 @@
 # CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT (truthy = paused-by-default, so a session
 # stays silent until it explicitly resumes).
 #
-# Invoked by the /notify-marker:pause and :resume slash commands.
-# Idempotent: repeating pause/resume for a session is a harmless no-op.
+# Invoked by the /notify-marker:pause and :unpause slash commands.
+# Idempotent: repeating pause/unpause for a session is a harmless no-op.
 #
-# Usage: notify-marker.sh {pause|resume|status}
+# Usage: notify-marker.sh {pause|unpause|status}
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -40,10 +40,10 @@ case "$action" in
         notify_marker_list_add "$paused" "$sid"
         echo "notify-marker: paused for this session ($sid)."
         ;;
-    resume)
+    unpause)
         notify_marker_list_remove "$paused" "$sid"
         notify_marker_list_add "$active" "$sid"
-        echo "notify-marker: resumed for this session ($sid)."
+        echo "notify-marker: unpaused for this session ($sid)."
         ;;
     status)
         if notify_marker_listed "$paused" "$sid"; then
@@ -57,7 +57,7 @@ case "$action" in
         fi
         ;;
     *)
-        echo "usage: notify-marker.sh {pause|resume|status}"
+        echo "usage: notify-marker.sh {pause|unpause|status}"
         exit 2
         ;;
 esac
