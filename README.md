@@ -75,6 +75,27 @@ and make sure Claude Code and the watcher resolve to the same directory.
 (The watcher's `CC_NOTIFY_MARKER_WATCH_DIR` still defaults to
 `/tmp/cc-notify-marker-files` if you don't set it.)
 
+### Persisting the config
+
+Typing the env var on every launch is tedious. To enable the plugin for **every
+session in a project**, put it in that project's `.claude/settings.json`
+(or `.claude/settings.local.json` to keep it out of git; or `~/.claude/settings.json`
+for all projects):
+
+```json
+{
+  "env": {
+    "CC_NOTIFY_MARKER_DIR": "/path/to/some/dir"
+  }
+}
+```
+
+This is the **default-active** workflow: every session emits, and you mute the
+ones you don't want with `/notify-marker:pause`.
+
+Settings `env` is read at **launch**, so after editing it you must **restart**
+Claude Code — `/reload-plugins` does not re-read env.
+
 ## Pausing a single session
 
 To mute markers for the **current** session only, without affecting other
@@ -106,6 +127,18 @@ CC_NOTIFY_MARKER_DIR="/path/to/some/dir" \
   CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1 claude
 ```
 
+Or persist the **default-paused** workflow in settings (alongside the marker
+dir — both are needed, since the dir is what enables the plugin at all):
+
+```json
+{
+  "env": {
+    "CC_NOTIFY_MARKER_DIR": "/path/to/some/dir",
+    "CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT": "1"
+  }
+}
+```
+
 Now every session is silent until you run `/notify-marker:unpause`, and
 `/notify-marker:pause` returns it to silent. (An explicit pause/unpause always
-overrides the default.)
+overrides the default.) As with any `env` change, restart Claude Code to apply.
