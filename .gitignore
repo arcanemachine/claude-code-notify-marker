@@ -1,0 +1,6 @@
+# Editor / OS cruft
+*.swp
+.DS_Store
+
+# Local marker files (in case the default dir is used inside the repo)
+/cc-notify-marker-files/

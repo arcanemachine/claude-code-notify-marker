@@ -1,0 +1,14 @@
+{
+  "name": "claude-code-notify-marker",
+  "version": "0.1.0",
+  "description": "Marker file plugin for Claude Code - create files when events occur",
+  "author": {
+    "name": "Nicholas Moen"
+  },
+  "homepage": "https://github.com/arcanemachine/claude-code-notify-marker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arcanemachine/claude-code-notify-marker"
+  },
+  "license": "MIT"
+}
