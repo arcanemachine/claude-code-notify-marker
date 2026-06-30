@@ -19,15 +19,20 @@ marker_name="$1"
 # Disabled or not configured -> do nothing.
 dir="$(notify_marker_dir)" || exit 0
 
+sid="${CLAUDE_CODE_SESSION_ID:-}"
+
 # Per-session mute: skip if this session is paused.
-if [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] &&
-    grep -qxF "$CLAUDE_CODE_SESSION_ID" "$dir/.paused-sessions" 2>/dev/null; then
+if [ -n "$sid" ] &&
+    grep -qxF "$sid" "$dir/.paused-sessions" 2>/dev/null; then
     exit 0
 fi
 
+# Write the session label (its name, else its id) as the marker's contents, so
+# the watcher can show which session fired. Plain text - no parsing needed.
+label="$(notify_marker_session_name)"
+label="${label:-$sid}"
 mkdir -p "$dir" 2>/dev/null &&
-    printf '{"created":"%s"}' "$(date --iso-8601=seconds)" \
-        > "$dir/$marker_name" 2>/dev/null
+    printf '%s' "$label" > "$dir/$marker_name" 2>/dev/null
 
 # Always succeed - markers are best-effort and must never block Claude.
 exit 0

@@ -22,6 +22,13 @@ remove_existing_markers() {
     fi
 }
 
+# Read the session label written into a marker file (its name, else its id).
+marker_session() {
+    local s
+    s=$(cat "$1" 2>/dev/null)
+    printf '%s' "${s:-unknown}"
+}
+
 # Remove existing markers on startup
 echo "Watching marker directory: $CC_NOTIFY_MARKER_WATCH_DIR"
 remove_existing_markers
@@ -29,11 +36,14 @@ remove_existing_markers
 # Check if inotifywait is available
 if command -v inotifywait &> /dev/null; then
     echo "Using inotifywait to watch files."
-    inotifywait -m -e create --format '%f' "$CC_NOTIFY_MARKER_WATCH_DIR" | while read -r file; do
+    # close_write (not create) so the marker's contents are fully written
+    # before we read the session label out of it.
+    inotifywait -m -e close_write --format '%f' "$CC_NOTIFY_MARKER_WATCH_DIR" | while read -r file; do
         filename=$(basename "$file")
         # Ignore dotfiles (e.g. .paused-sessions state) - not marker events.
         case "$filename" in .*) continue ;; esac
-        notify-send -t 15000 "Claude Code event handler" "\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
+        session=$(marker_session "$CC_NOTIFY_MARKER_WATCH_DIR/$file")
+        notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
         rm "$CC_NOTIFY_MARKER_WATCH_DIR/$file"
     done
 else
@@ -43,7 +53,8 @@ else
         for file in "$CC_NOTIFY_MARKER_WATCH_DIR"/*; do
             if [ -f "$file" ]; then
                 filename=$(basename "$file")
-                notify-send -t 15000 "Claude Code event handler" "\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
+                session=$(marker_session "$file")
+                notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
                 rm "$file"
             fi
         done

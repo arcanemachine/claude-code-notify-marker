@@ -14,3 +14,19 @@ notify_marker_dir() {
     esac
     printf '%s' "$dir"
 }
+
+# Print the current session's configured name (Claude Code session metadata),
+# or empty if it has none / cannot be resolved. The watcher falls back to the
+# session id when this is empty. Characters that would break the flat JSON
+# marker payload are stripped.
+notify_marker_session_name() {
+    local sid="${CLAUDE_CODE_SESSION_ID:-}"
+    local cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    local name=""
+    if [ -n "$sid" ] && command -v jq >/dev/null 2>&1; then
+        name="$(jq -r --arg id "$sid" \
+            'select(.sessionId == $id) | .name // empty' \
+            "$cfg"/sessions/*.json 2>/dev/null | head -n1)"
+    fi
+    printf '%s' "${name//[\"\\]/}"
+}
