@@ -6,6 +6,21 @@ CC_NOTIFY_MARKER_WATCH_DIR="${CC_NOTIFY_MARKER_WATCH_DIR:-/tmp/cc-notify-marker-
 # Ensure directory exists
 mkdir -p "$CC_NOTIFY_MARKER_WATCH_DIR"
 
+# Single-instance guard: refuse to start a second watcher on the same directory
+# (duplicate watchers cause duplicate notifications). Held for our lifetime.
+if command -v flock &> /dev/null; then
+    exec 9>"$CC_NOTIFY_MARKER_WATCH_DIR/.watcher.lock"
+    if ! flock -n 9; then
+        echo "Another watcher is already running on $CC_NOTIFY_MARKER_WATCH_DIR. Exiting."
+        exit 1
+    fi
+fi
+
+# Marker filenames are "<EVENT>.<unique-suffix>"; show just the event.
+marker_event() {
+    printf '%s' "${1%%.*}"
+}
+
 # Remove existing marker files on startup
 remove_existing_markers() {
     shopt -s nullglob
@@ -43,7 +58,7 @@ if command -v inotifywait &> /dev/null; then
         # Ignore dotfiles (e.g. .paused-sessions state) - not marker events.
         case "$filename" in .*) continue ;; esac
         session=$(marker_session "$CC_NOTIFY_MARKER_WATCH_DIR/$file")
-        notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
+        notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $(marker_event "$filename")\n\nTimestamp: $(date --iso-8601=seconds)"
         rm "$CC_NOTIFY_MARKER_WATCH_DIR/$file"
     done
 else
@@ -54,7 +69,7 @@ else
             if [ -f "$file" ]; then
                 filename=$(basename "$file")
                 session=$(marker_session "$file")
-                notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
+                notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $(marker_event "$filename")\n\nTimestamp: $(date --iso-8601=seconds)"
                 rm "$file"
             fi
         done

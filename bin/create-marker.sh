@@ -36,8 +36,13 @@ fi
 # the watcher can show which session fired. Plain text - no parsing needed.
 label="$(notify_marker_session_name)"
 label="${label:-$sid}"
+
+# Unique filename per event so concurrent sessions don't clobber each other's
+# markers before the watcher consumes them. The event name is the part before
+# the first dot; the watcher strips the suffix for display.
+suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"
 mkdir -p "$dir" 2>/dev/null &&
-    printf '%s' "$label" > "$dir/$marker_name" 2>/dev/null
+    printf '%s' "$label" > "$dir/${marker_name}.${suffix}" 2>/dev/null
 
 # Always succeed - markers are best-effort and must never block Claude.
 exit 0

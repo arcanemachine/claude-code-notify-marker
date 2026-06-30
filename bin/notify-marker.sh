@@ -10,12 +10,13 @@
 # CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT (truthy = paused-by-default, so a session
 # stays silent until it explicitly unpauses).
 #
-# Invoked by the /notify-marker:pause and :unpause slash commands.
+# Invoked by the /notify-marker:pause, :unpause and :status slash commands, and
+# by the SessionEnd hook (forget) to drop this session's entries on exit.
 # Idempotent and quiet: it records intent when possible and prints a single
 # terse line. If the plugin is disabled (no marker dir) it just no-ops silently
 # rather than printing errors.
 #
-# Usage: notify-marker.sh {pause|unpause|status}
+# Usage: notify-marker.sh {pause|unpause|status|forget}
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -37,16 +38,23 @@ if [ -n "$dir" ] && [ -n "$sid" ]; then
             notify_marker_list_remove "$paused" "$sid"
             notify_marker_list_add "$active" "$sid"
             ;;
+        forget)
+            notify_marker_list_remove "$paused" "$sid"
+            notify_marker_list_remove "$active" "$sid"
+            ;;
     esac
 fi
 
 case "$action" in
     pause) echo "notify-marker: paused" ;;
     unpause) echo "notify-marker: unpaused" ;;
+    forget) ;; # quiet: SessionEnd cleanup
     status)
-        if [ -n "$dir" ] && notify_marker_listed "$dir/.paused-sessions" "$sid"; then
+        if [ -z "$dir" ]; then
+            echo "disabled (CC_NOTIFY_MARKER_DIR not set)"
+        elif notify_marker_listed "$dir/.paused-sessions" "$sid"; then
             echo "paused"
-        elif [ -n "$dir" ] && notify_marker_listed "$dir/.active-sessions" "$sid"; then
+        elif notify_marker_listed "$dir/.active-sessions" "$sid"; then
             echo "active"
         elif notify_marker_truthy "${CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT:-}"; then
             echo "paused (default)"
@@ -55,7 +63,7 @@ case "$action" in
         fi
         ;;
     *)
-        echo "usage: notify-marker.sh {pause|unpause|status}"
+        echo "usage: notify-marker.sh {pause|unpause|status|forget}"
         exit 2
         ;;
 esac

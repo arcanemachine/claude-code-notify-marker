@@ -80,14 +80,20 @@ and make sure Claude Code and the watcher resolve to the same directory.
 To mute markers for the **current** session only, without affecting other
 sessions and without restarting, use the bundled slash commands:
 
-| Command                             | Effect                                    |
-| ----------------------------------- | ----------------------------------------- |
-| `/notify-marker:pause`  | Stop emitting markers for this session    |
-| `/notify-marker:unpause` | Resume emitting markers for this session  |
+| Command                  | Effect                                                    |
+| ------------------------ | --------------------------------------------------------- |
+| `/notify-marker:pause`   | Stop emitting markers for this session                    |
+| `/notify-marker:unpause` | Resume emitting markers for this session                  |
+| `/notify-marker:status`  | Report this session's state (`active`/`paused`/`disabled`) |
 
 These record the session's id (`CLAUDE_CODE_SESSION_ID`) in `.paused-sessions` /
 `.active-sessions` files inside the marker directory; `create-marker.sh` honors
 them. The watcher ignores dotfiles, so this state is never treated as an event.
+A `SessionEnd` hook drops the session's entries on exit, so these files don't
+accumulate stale ids.
+
+Marker files are named `<EVENT>.<unique-suffix>` so simultaneous events from
+different sessions never clobber each other; the watcher shows just `<EVENT>`.
 
 ### Paused by default (opt-in per session)
 
