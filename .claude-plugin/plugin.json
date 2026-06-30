@@ -1,6 +1,6 @@
 {
   "name": "notify-marker",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Marker file plugin for Claude Code - create files when events occur",
   "author": {
     "name": "Nicholas Moen"
