@@ -22,11 +22,13 @@ notify_marker_dir() {
 notify_marker_session_name() {
     local sid="${CLAUDE_CODE_SESSION_ID:-}"
     local cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-    local name=""
-    if [ -n "$sid" ] && command -v jq >/dev/null 2>&1; then
-        name="$(jq -r --arg id "$sid" \
-            'select(.sessionId == $id) | .name // empty' \
-            "$cfg"/sessions/*.json 2>/dev/null | head -n1)"
+    local file name=""
+    [ -n "$sid" ] || return 0
+    # Find this session's metadata file (the id is unique enough to match on),
+    # then pull its "name" field out with sed. No jq dependency.
+    file="$(grep -lF "$sid" "$cfg"/sessions/*.json 2>/dev/null | head -n1)"
+    if [ -n "$file" ]; then
+        name="$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$file" | head -n1)"
     fi
     printf '%s' "${name//[\"\\]/}"
 }
