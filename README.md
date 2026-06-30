@@ -46,18 +46,44 @@ Use the `/hooks` command inside Claude Code to confirm the hooks registered.
 
 If you want desktop notifications when the agent finishes or needs attention:
 
-1. Start Claude Code in the container (with the plugin installed).
+1. Start Claude Code in the container (with the plugin installed), enabling it
+   for the session — see [Enabling](#enabling-opt-in).
 
 2. Run `watch-and-notify.sh` from the host.
 
-## Directory config
+## Enabling (opt-in)
+
+The plugin is **opt-in**: even when installed, it writes nothing unless
+`CC_NOTIFY_MARKER_DIR` is set to a marker directory. This lets you keep it
+installed everywhere but only emit markers in the sessions you choose.
 
 ```bash
-# Start Claude Code with a custom marker directory
+# Enable for a session by pointing it at a marker directory
 CC_NOTIFY_MARKER_DIR="/path/to/some/dir" claude
 
-# Run watcher script pointing to the same directory in a Docker volume mount
-CC_NOTIFY_MARKER_WATCH_DIR="/workspace/path/to/mount/dir" ./watch-and-notify.sh
+# Run the watcher on the host, pointing at the same directory (e.g. a volume mount)
+CC_NOTIFY_MARKER_WATCH_DIR="/path/to/some/dir" ./watch-and-notify.sh
 ```
 
-Both default to `/tmp/cc-notify-marker-files`. Prefer absolute paths; make sure Claude Code and the watcher resolve to the same directory (e.g. a shared volume mount).
+If `CC_NOTIFY_MARKER_DIR` is unset/empty or set to a falsey value (`0`, `false`,
+`off`, `no`), the plugin stays inert for that session. There is no built-in
+default on the plugin side — enabling is always explicit. Prefer absolute paths,
+and make sure Claude Code and the watcher resolve to the same directory.
+
+(The watcher's `CC_NOTIFY_MARKER_WATCH_DIR` still defaults to
+`/tmp/cc-notify-marker-files` if you don't set it.)
+
+## Pausing a single session
+
+To mute markers for the **current** session only, without affecting other
+sessions and without restarting, use the bundled slash commands:
+
+| Command                             | Effect                                    |
+| ----------------------------------- | ----------------------------------------- |
+| `/notify-marker:pause`  | Stop emitting markers for this session    |
+| `/notify-marker:resume` | Resume emitting markers for this session  |
+
+These add/remove the session's id (`CLAUDE_CODE_SESSION_ID`) in a
+`.paused-sessions` file inside the marker directory; `create-marker.sh` skips
+any session listed there. The watcher ignores dotfiles, so this state file is
+never treated as an event.

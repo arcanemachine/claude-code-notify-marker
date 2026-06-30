@@ -31,6 +31,8 @@ if command -v inotifywait &> /dev/null; then
     echo "Using inotifywait to watch files."
     inotifywait -m -e create --format '%f' "$CC_NOTIFY_MARKER_WATCH_DIR" | while read -r file; do
         filename=$(basename "$file")
+        # Ignore dotfiles (e.g. .paused-sessions state) - not marker events.
+        case "$filename" in .*) continue ;; esac
         notify-send -t 15000 "Claude Code event handler" "\nEvent: $filename\n\nTimestamp: $(date --iso-8601=seconds)"
         rm "$CC_NOTIFY_MARKER_WATCH_DIR/$file"
     done
