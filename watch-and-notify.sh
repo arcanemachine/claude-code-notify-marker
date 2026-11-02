@@ -38,10 +38,24 @@ remove_existing_markers() {
 }
 
 # Read the session label written into a marker file (its name, else its id).
+# Line 1 is the label; any following lines are an optional message (PING).
 marker_session() {
     local s
-    s=$(cat "$1" 2>/dev/null)
+    s=$(head -n1 "$1" 2>/dev/null)
     printf '%s' "${s:-unknown}"
+}
+
+marker_message() {
+    tail -n +2 "$1" 2>/dev/null
+}
+
+# Build the notification body for marker file $1.
+marker_body() {
+    local body msg
+    body="\nSession: $(marker_session "$1")\n\nEvent: $(marker_event "$(basename "$1")")"
+    msg=$(marker_message "$1")
+    [ -n "$msg" ] && body="$body\n\nMessage: $msg"
+    printf '%s' "$body\n\nTimestamp: $(date --iso-8601=seconds)"
 }
 
 # Remove existing markers on startup
@@ -57,8 +71,7 @@ if command -v inotifywait &> /dev/null; then
         filename=$(basename "$file")
         # Ignore dotfiles (e.g. .paused-sessions state) - not marker events.
         case "$filename" in .*) continue ;; esac
-        session=$(marker_session "$CC_NOTIFY_MARKER_WATCH_DIR/$file")
-        notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $(marker_event "$filename")\n\nTimestamp: $(date --iso-8601=seconds)"
+        notify-send -t 15000 "Claude Code event handler" "$(marker_body "$CC_NOTIFY_MARKER_WATCH_DIR/$file")"
         rm "$CC_NOTIFY_MARKER_WATCH_DIR/$file"
     done
 else
@@ -68,8 +81,7 @@ else
         for file in "$CC_NOTIFY_MARKER_WATCH_DIR"/*; do
             if [ -f "$file" ]; then
                 filename=$(basename "$file")
-                session=$(marker_session "$file")
-                notify-send -t 15000 "Claude Code event handler" "\nSession: $session\n\nEvent: $(marker_event "$filename")\n\nTimestamp: $(date --iso-8601=seconds)"
+                notify-send -t 15000 "Claude Code event handler" "$(marker_body "$file")"
                 rm "$file"
             fi
         done

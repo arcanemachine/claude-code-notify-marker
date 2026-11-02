@@ -7,6 +7,7 @@ set -u
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CM="$here/bin/create-marker.sh"
 NM="$here/bin/notify-marker.sh"
+PING="$here/bin/notify-marker-ping"
 
 pass=0 fail=0
 ok() { if [ "$2" = "$3" ]; then pass=$((pass + 1)); else fail=$((fail + 1)); echo "FAIL: $1 (want [$3] got [$2])"; fi; }
@@ -74,6 +75,20 @@ unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
 CLAUDE_CODE_SESSION_ID=sA "$CM" AGENT_DONE
 CLAUDE_CODE_SESSION_ID=sB "$CM" AGENT_DONE
 ok "two sessions -> two markers" "$(nfiles "$D/AGENT_DONE")" "2"
+
+# --- ping ignores pause state, carries an optional message ---
+rm -f "$D"/PING.* "$D/.paused-sessions" "$D/.active-sessions"
+export CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1
+"$NM" pause >/dev/null
+"$PING" "need input" >/dev/null
+ok "ping emits while paused" "$(nfiles "$D/PING")" "1"
+ok "ping label line"   "$(head -n1 "$D"/PING.*)" "s1"
+ok "ping message line" "$(tail -n +2 "$D"/PING.*)" "need input"
+rm -f "$D"/PING.*
+"$PING" >/dev/null
+ok "ping without message" "$(cat "$D"/PING.*)" "s1"
+ok "ping disabled fails" "$(CC_NOTIFY_MARKER_DIR="" "$PING" 2>/dev/null; echo $?)" "1"
+unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
 
 echo "---"
 echo "passed=$pass failed=$fail"

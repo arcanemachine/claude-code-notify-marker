@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# notify-marker-ping
+# Run manually by an agent to ping the user (e.g. "I need your input").
+# Writes a PING marker for the watcher to turn into a desktop notification.
+#
+# Unlike the Stop/Notification hooks, this IGNORES pause state: pausing a
+# session silences routine "agent done" noise, not deliberate requests for the
+# user's attention. It still requires CC_NOTIFY_MARKER_DIR (opt-in).
+#
+# Usage: notify-marker-ping [message...]
+#
+# Marker contents: line 1 = session label, line 2 = optional message.
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+dir="$(notify_marker_dir)" || {
+    echo "notify-marker-ping: disabled (CC_NOTIFY_MARKER_DIR not set)" >&2
+    exit 1
+}
+
+sid="${CLAUDE_CODE_SESSION_ID:-}"
+label="$(notify_marker_session_name)"
+label="${label:-$sid}"
+message="$*"
+
+suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"
+mkdir -p "$dir" 2>/dev/null || exit 1
+if [ -n "$message" ]; then
+    printf '%s\n%s' "$label" "$message" > "$dir/PING.${suffix}" || exit 1
+else
+    printf '%s' "$label" > "$dir/PING.${suffix}" || exit 1
+fi
+echo "notify-marker: pinged"

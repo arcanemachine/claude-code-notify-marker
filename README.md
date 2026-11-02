@@ -142,3 +142,18 @@ dir — both are needed, since the dir is what enables the plugin at all):
 Now every session is silent until you run `/notify-marker:unpause`, and
 `/notify-marker:pause` returns it to silent. (An explicit pause/unpause always
 overrides the default.) As with any `env` change, restart Claude Code to apply.
+
+## Agent ping (ignores pause)
+
+Pausing silences routine `AGENT_DONE`/`NOTIFICATION` markers, but an agent can
+still deliberately get your attention. The plugin ships a `ping` skill that
+runs `bin/notify-marker-ping`, which writes a `PING` marker **regardless of
+pause state** (it still requires `CC_NOTIFY_MARKER_DIR`):
+
+```bash
+notify-marker-ping "Need your decision on the migration"
+```
+
+The marker's first line is the session label and the optional second line is
+the message; the watcher shows it as `Message:` in the notification. Ask the
+agent to "ping me when you need me", or invoke `/notify-marker:ping`.

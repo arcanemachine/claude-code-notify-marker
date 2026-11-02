@@ -11,7 +11,7 @@ Commit when a task is completed.
 jq . .claude-plugin/plugin.json hooks/hooks.json
 
 # Keep shell scripts executable
-chmod +x bin/create-marker.sh watch-and-notify.sh
+chmod +x bin/create-marker.sh bin/notify-marker-ping watch-and-notify.sh
 ```
 
 ## Commit Style
