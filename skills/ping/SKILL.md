@@ -8,4 +8,9 @@ Run, with a short message saying what you need:
 
 `"${CLAUDE_PLUGIN_ROOT}/bin/notify-marker-ping" "<short message>"`
 
-Then tell the user what you need in your reply as usual. The ping only gets their attention; it does not replace the message.
+It waits briefly to see if the watcher picked the ping up:
+
+- `ping delivered` (exit 0): the user was notified.
+- `ping NOT picked up` (exit 3): no watcher is running, so the user was not notified. Don't retry; just say what you need in your reply.
+
+Either way, tell the user what you need in your reply as usual. The ping only gets their attention; it does not replace the message.

@@ -76,17 +76,34 @@ CLAUDE_CODE_SESSION_ID=sA "$CM" AGENT_DONE
 CLAUDE_CODE_SESSION_ID=sB "$CM" AGENT_DONE
 ok "two sessions -> two markers" "$(nfiles "$D/AGENT_DONE")" "2"
 
-# --- ping ignores pause state, carries an optional message ---
+# --- ping ignores pause state, carries an optional message, reports delivery ---
 rm -f "$D"/PING.* "$D/.paused-sessions" "$D/.active-sessions"
 export CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1
 "$NM" pause >/dev/null
-"$PING" "need input" >/dev/null
-ok "ping emits while paused" "$(nfiles "$D/PING")" "1"
-ok "ping label line"   "$(head -n1 "$D"/PING.*)" "s1"
-ok "ping message line" "$(tail -n +2 "$D"/PING.*)" "need input"
-rm -f "$D"/PING.*
-"$PING" >/dev/null
-ok "ping without message" "$(cat "$D"/PING.*)" "s1"
+
+# Fake watcher: copy the first PING marker aside, then consume it.
+fake_watch() {
+    local f
+    for _ in $(seq 1 30); do
+        for f in "$D"/PING.*; do
+            [ -e "$f" ] && { cp "$f" "$T/seen"; rm -f "$f"; return; }
+        done
+        sleep 0.1
+    done
+}
+
+rm -f "$T/seen"; fake_watch & "$PING" "need input" >/dev/null; rc=$?; wait
+ok "ping delivered while paused" "$rc" "0"
+ok "ping label line"   "$(head -n1 "$T/seen")" "s1"
+ok "ping message line" "$(tail -n +2 "$T/seen")" "need input"
+
+rm -f "$T/seen"; fake_watch & "$PING" >/dev/null; wait
+ok "ping without message" "$(cat "$T/seen")" "s1"
+
+CC_NOTIFY_MARKER_PING_WAIT=0.3 "$PING" "nobody home" >/dev/null; rc=$?
+ok "ping undelivered exit"    "$rc" "3"
+ok "ping undelivered cleaned" "$(nfiles "$D/PING")" "0"
+
 ok "ping disabled fails" "$(CC_NOTIFY_MARKER_DIR="" "$PING" 2>/dev/null; echo $?)" "1"
 unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
 

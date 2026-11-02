@@ -11,6 +11,12 @@
 # Usage: notify-marker-ping [message...]
 #
 # Marker contents: line 1 = session label, line 2 = optional message.
+#
+# After writing, waits up to CC_NOTIFY_MARKER_PING_WAIT seconds (default 2) for
+# the watcher to consume the marker, so the caller knows whether it was seen:
+#   exit 0 - delivered (watcher picked it up)
+#   exit 1 - disabled / could not write
+#   exit 3 - not picked up (watcher likely not running); marker is removed
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -26,9 +32,24 @@ message="$*"
 
 suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"
 mkdir -p "$dir" 2>/dev/null || exit 1
+marker="$dir/PING.${suffix}"
 if [ -n "$message" ]; then
-    printf '%s\n%s' "$label" "$message" > "$dir/PING.${suffix}" || exit 1
+    printf '%s\n%s' "$label" "$message" > "$marker" || exit 1
 else
-    printf '%s' "$label" > "$dir/PING.${suffix}" || exit 1
+    printf '%s' "$label" > "$marker" || exit 1
 fi
-echo "notify-marker: pinged"
+
+# Poll in 0.1s steps until the watcher removes the marker or we time out.
+wait="${CC_NOTIFY_MARKER_PING_WAIT:-2}"
+steps=$(awk -v w="$wait" 'BEGIN { printf "%d", w * 10 }')
+for ((i = 0; i < steps; i++)); do
+    [ -e "$marker" ] || break
+    sleep 0.1
+done
+
+if [ -e "$marker" ]; then
+    rm -f "$marker"
+    echo "notify-marker: ping NOT picked up (watcher not running?) - tell the user in your reply instead"
+    exit 3
+fi
+echo "notify-marker: ping delivered"

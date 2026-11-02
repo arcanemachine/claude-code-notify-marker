@@ -155,5 +155,10 @@ notify-marker-ping "Need your decision on the migration"
 ```
 
 The marker's first line is the session label and the optional second line is
-the message; the watcher shows it as `Message:` in the notification. Ask the
+the message; the watcher shows it as `Message:` in the notification.
+
+The script then waits up to `CC_NOTIFY_MARKER_PING_WAIT` seconds (default `2`)
+for the watcher to consume the marker. It prints `ping delivered` (exit 0), or
+`ping NOT picked up` (exit 3, marker removed) when no watcher is running, so the
+agent knows whether to rely on pings or just say what it needs in its reply. Ask the
 agent to "ping me when you need me", or invoke `/notify-marker:ping`.
