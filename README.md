@@ -16,14 +16,14 @@ Claude Code [hooks](https://code.claude.com/docs/en/hooks) run a small bundled s
 
 The included script `./watch-and-notify.sh` watches the marker directory and sends Linux OS notifications (via `notify-send`) when files are created. It automatically deletes the marker file after showing the notification.
 
-Each marker file's contents are the originating session's label — its Claude Code session name, or its session id if unnamed — which the watcher shows in the notification (`Session: ...`) so you can tell which session fired.
+Each marker file's first line is the originating session's label — its Claude Code session name, or its session id if unnamed — which the watcher shows in the notification (`Session: ...`) so you can tell which session fired. `NOTIFICATION` and `PING` markers may add a message as a second line, shown as `Message: ...`.
 
 ### Supported Events
 
 | Event          | Hook           | Marker File    | Description                          |
 | -------------- | -------------- | -------------- | ------------------------------------ |
 | Agent done     | `Stop`         | `AGENT_DONE`   | Claude finished responding           |
-| Needs input    | `Notification` | `NOTIFICATION` | Claude needs attention (e.g. a permission prompt or is idle waiting for input) |
+| Needs input    | `Notification` | `NOTIFICATION` | Claude needs you: a permission prompt or a question (not the idle reminder after a stop) |
 
 ## Installation
 
