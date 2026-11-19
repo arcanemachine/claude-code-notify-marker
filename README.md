@@ -151,7 +151,7 @@ instructions for when and what:
 
 ```
 /notify-marker:ping
-/notify-marker:ping in 10 seconds with the word "pickle"
+/notify-marker:ping in 10 seconds with the message "build finished"
 ```
 
 With no arguments the agent pings right away with the message `ping`. The skill
@@ -161,7 +161,7 @@ The skill runs `bin/notify-marker-ping`, which writes a `PING` marker
 **regardless of pause state** (it still requires `CC_NOTIFY_MARKER_DIR`):
 
 ```bash
-notify-marker-ping "pickle"
+notify-marker-ping "build finished"
 ```
 
 The marker's first line is the session label and the optional second line is

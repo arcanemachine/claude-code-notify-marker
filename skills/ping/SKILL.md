@@ -1,6 +1,6 @@
 ---
 name: ping
-description: Desktop ping via notify-marker; args say when and what (e.g. in 10s, "pickle")
+description: Desktop ping via notify-marker; args say when and what (e.g. in 10s, "build finished")
 disable-model-invocation: true
 allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/bin/notify-marker-ping:*)", "Bash(sleep:*)"]
 ---
