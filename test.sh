@@ -19,6 +19,8 @@ nfiles() { ls -1 "$1".* 2>/dev/null | wc -l | tr -d ' '; }
 
 T="$(mktemp -d)"
 trap 'rm -rf "$T"' EXIT
+# Hooks get JSON on stdin; tests that don't supply any must not wait on a terminal.
+exec </dev/null
 export CLAUDE_CONFIG_DIR="$T/cfg"; mkdir -p "$CLAUDE_CONFIG_DIR/sessions"
 
 # Did create-marker write any marker file for this event? (unique suffix names)
@@ -75,6 +77,43 @@ unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
 CLAUDE_CODE_SESSION_ID=sA "$CM" AGENT_DONE
 CLAUDE_CODE_SESSION_ID=sB "$CM" AGENT_DONE
 ok "two sessions -> two markers" "$(nfiles "$D/AGENT_DONE")" "2"
+
+# --- session name: top-level "name", not a former one ---
+rm -f "$D"/AGENT_DONE.* "$D/.paused-sessions" "$D/.active-sessions"
+printf '%s' '{"sessionId":"s9","name":"current","nameSource":"user","formerNames":[{"name":"old"}]}' \
+    > "$CLAUDE_CONFIG_DIR/sessions/9.json"
+# PATH without jq, to exercise the fallback parser.
+mkdir -p "$T/nojq"
+for f in /usr/bin/* /bin/*; do [ "${f##*/}" = jq ] || ln -sf "$f" "$T/nojq/" 2>/dev/null; done
+CLAUDE_CODE_SESSION_ID=s9 "$CM" AGENT_DONE
+ok "session name (jq)" "$(cat "$D"/AGENT_DONE.*)" "current"
+rm -f "$D"/AGENT_DONE.*
+CLAUDE_CODE_SESSION_ID=s9 PATH="$T/nojq" "$CM" AGENT_DONE
+ok "session name (no jq)" "$(cat "$D"/AGENT_DONE.*)" "current"
+rm -f "$D"/AGENT_DONE.* "$CLAUDE_CONFIG_DIR/sessions/9.json"
+
+# --- Notification hook input: "message" becomes the second line ---
+notif='{"session_id":"s1","hook_event_name":"Notification","message":"Claude needs your permission to use Bash","notification_type":"permission_prompt"}'
+rm -f "$D"/NOTIFICATION.*
+"$CM" NOTIFICATION <<<"$notif"
+ok "notification message (jq)" "$(tail -n +2 "$D"/NOTIFICATION.*)" "Claude needs your permission to use Bash"
+rm -f "$D"/NOTIFICATION.*
+PATH="$T/nojq" "$CM" NOTIFICATION <<<"$notif"
+ok "notification message (no jq)" "$(tail -n +2 "$D"/NOTIFICATION.*)" "Claude needs your permission to use Bash"
+esc='{"message":"use \"mcp\" in C:\\tmp"}'
+rm -f "$D"/NOTIFICATION.*
+"$CM" NOTIFICATION <<<"$esc"
+ok "escaped message (jq)" "$(tail -n +2 "$D"/NOTIFICATION.*)" 'use "mcp" in C:\tmp'
+rm -f "$D"/NOTIFICATION.*
+PATH="$T/nojq" "$CM" NOTIFICATION <<<"$esc"
+ok "escaped message (no jq)" "$(tail -n +2 "$D"/NOTIFICATION.*)" 'use "mcp" in C:\tmp'
+rm -f "$D"/NOTIFICATION.*
+start=$(date +%s); "$CM" NOTIFICATION < <(sleep 5)
+ok "open stdin doesn't hang" "$(( $(date +%s) - start < 4 ))" "1"
+rm -f "$D"/AGENT_DONE.*
+"$CM" AGENT_DONE <<<'{"session_id":"s1","hook_event_name":"Stop","last_assistant_message":"done"}'
+ok "stop marker has no message" "$(cat "$D"/AGENT_DONE.*)" "s1"
+rm -f "$D"/AGENT_DONE.* "$D"/NOTIFICATION.*
 
 # --- ping ignores pause state, carries an optional message, reports delivery ---
 rm -f "$D"/PING.* "$D/.paused-sessions" "$D/.active-sessions"

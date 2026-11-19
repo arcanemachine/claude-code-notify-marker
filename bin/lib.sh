@@ -25,12 +25,24 @@ notify_marker_session_name() {
     local file name=""
     [ -n "$sid" ] || return 0
     # Find this session's metadata file (the id is unique enough to match on),
-    # then pull its "name" field out with sed. No jq dependency.
+    # then read its top-level "name" (not the ones under "formerNames").
     file="$(grep -lF "$sid" "$cfg"/sessions/*.json 2>/dev/null | head -n1)"
     if [ -n "$file" ]; then
-        name="$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$file" | head -n1)"
+        name="$(notify_marker_json_field name < "$file")"
     fi
     printf '%s' "${name//[\"\\]/}"
+}
+
+# Print top-level string field $1 of the JSON object on stdin. Uses jq when
+# installed; otherwise takes the first match, which is the top-level field as
+# long as it comes before any nested object holding the same key.
+notify_marker_json_field() {
+    if command -v jq >/dev/null 2>&1; then
+        jq -r --arg k "$1" '.[$k] // empty | strings' 2>/dev/null
+    else
+        grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"(\\\\.|[^\"\\\\])*\"" | head -n1 |
+            sed -e 's/^[^:]*:[[:space:]]*"//' -e 's/"$//' -e 's/\\"/"/g' -e 's/\\\\/\\/g'
+    fi
 }
 
 # True if $1 is a truthy flag value (1/true/yes/on, case-insensitive).

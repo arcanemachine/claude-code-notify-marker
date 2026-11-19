@@ -37,12 +37,23 @@ fi
 label="$(notify_marker_session_name)"
 label="${label:-$sid}"
 
+# The Notification hook's JSON input carries a "message" (e.g. which tool needs
+# permission); it becomes the marker's optional second line. The read is
+# bounded so an input that never closes can't hold up Claude.
+message=""
+if [ "$marker_name" = NOTIFICATION ] && [ ! -t 0 ]; then
+    IFS= read -r -d '' -t 1 input
+    message="$(printf '%s' "$input" | notify_marker_json_field message)"
+fi
+
 # Unique filename per event so concurrent sessions don't clobber each other's
 # markers before the watcher consumes them. The event name is the part before
 # the first dot; the watcher strips the suffix for display.
 suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"
+content="$label"
+[ -n "$message" ] && content="$label"$'\n'"$message"
 mkdir -p "$dir" 2>/dev/null &&
-    printf '%s' "$label" > "$dir/${marker_name}.${suffix}" 2>/dev/null
+    printf '%s' "$content" > "$dir/${marker_name}.${suffix}" 2>/dev/null
 
 # Always succeed - markers are best-effort and must never block Claude.
 exit 0
