@@ -143,15 +143,25 @@ Now every session is silent until you run `/notify-marker:unpause`, and
 `/notify-marker:pause` returns it to silent. (An explicit pause/unpause always
 overrides the default.) As with any `env` change, restart Claude Code to apply.
 
-## Agent ping (ignores pause)
+## Ping (ignores pause)
 
-Pausing silences routine `AGENT_DONE`/`NOTIFICATION` markers, but an agent can
-still deliberately get your attention. The plugin ships a `ping` skill that
-runs `bin/notify-marker-ping`, which writes a `PING` marker **regardless of
-pause state** (it still requires `CC_NOTIFY_MARKER_DIR`):
+Pausing silences routine `AGENT_DONE`/`NOTIFICATION` markers, but you can still
+ask the agent for a ping. Run `/notify-marker:ping`, optionally with
+instructions for when and what:
+
+```
+/notify-marker:ping
+/notify-marker:ping in 10 seconds with the word "pickle"
+```
+
+With no arguments the agent pings right away with the message `ping`. The skill
+sets `disable-model-invocation`, so an agent never pings on its own.
+
+The skill runs `bin/notify-marker-ping`, which writes a `PING` marker
+**regardless of pause state** (it still requires `CC_NOTIFY_MARKER_DIR`):
 
 ```bash
-notify-marker-ping "Need your decision on the migration"
+notify-marker-ping "pickle"
 ```
 
 The marker's first line is the session label and the optional second line is
@@ -160,5 +170,4 @@ the message; the watcher shows it as `Message:` in the notification.
 The script then waits up to `CC_NOTIFY_MARKER_PING_WAIT` seconds (default `2`)
 for the watcher to consume the marker. It prints `ping delivered` (exit 0), or
 `ping NOT picked up` (exit 3, marker removed) when no watcher is running, so the
-agent knows whether to rely on pings or just say what it needs in its reply. Ask the
-agent to "ping me when you need me", or invoke `/notify-marker:ping`.
+agent can tell you the ping did not arrive.

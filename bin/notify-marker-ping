@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # notify-marker-ping
-# Run manually by an agent to ping the user (e.g. "I need your input").
+# Pings the user on request (the ping skill runs it).
 # Writes a PING marker for the watcher to turn into a desktop notification.
 #
 # Unlike the Stop/Notification hooks, this IGNORES pause state: pausing a
