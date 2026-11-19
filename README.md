@@ -166,6 +166,18 @@ notify-marker-ping "build finished"
 
 The marker's first line is the session label and the optional second line is
 the message; the watcher shows it as `Message:` in the notification.
+A message longer than `CC_NOTIFY_MARKER_PING_MAX` characters (default `255`) is
+cut to that length, ending in `…`.
+
+To also hear pings, start the watcher with `CC_NOTIFY_MARKER_SPEAK_PING=1`. It
+says "ping from <session>: <message>" with `spd-say`, or `espeak-ng` if
+`spd-say` is missing. If neither is installed, the watcher says so at startup
+(in its output and as a notification) and shows pings without speech. Other
+events are never spoken.
+
+```bash
+CC_NOTIFY_MARKER_SPEAK_PING=1 ./watch-and-notify.sh
+```
 
 The script then waits up to `CC_NOTIFY_MARKER_PING_WAIT` seconds (default `2`)
 for the watcher to consume the marker. It prints `ping delivered` (exit 0), or

@@ -10,7 +10,9 @@
 #
 # Usage: notify-marker-ping [message...]
 #
-# Marker contents: line 1 = session label, line 2 = optional message.
+# Marker contents: line 1 = session label, line 2 = optional message, cut to
+# CC_NOTIFY_MARKER_PING_MAX characters (default 255) so a notification or a
+# spoken ping stays short.
 #
 # After writing, waits up to CC_NOTIFY_MARKER_PING_WAIT seconds (default 2) for
 # the watcher to consume the marker, so the caller knows whether it was seen:
@@ -29,6 +31,11 @@ sid="${CLAUDE_CODE_SESSION_ID:-}"
 label="$(notify_marker_session_name)"
 label="${label:-$sid}"
 message="$*"
+max="${CC_NOTIFY_MARKER_PING_MAX:-255}"
+if [ "${#message}" -gt "$max" ]; then
+    message="${message:0:max-1}…"
+    echo "notify-marker: message cut to $max characters"
+fi
 
 suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"
 mkdir -p "$dir" 2>/dev/null || exit 1

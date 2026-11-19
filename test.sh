@@ -143,8 +143,40 @@ CC_NOTIFY_MARKER_PING_WAIT=0.3 "$PING" "nobody home" >/dev/null; rc=$?
 ok "ping undelivered exit"    "$rc" "3"
 ok "ping undelivered cleaned" "$(nfiles "$D/PING")" "0"
 
+long=$(printf 'é%.0s' $(seq 1 300))
+rm -f "$T/seen"; fake_watch & "$PING" "$long" >/dev/null; wait
+ok "ping message capped" "$(tail -n +2 "$T/seen" | wc -m | tr -d ' ')" "255"
+ok "ping cap marks the cut" "$(tail -n +2 "$T/seen" | tail -c 3)" "…"
+
 ok "ping disabled fails" "$(CC_NOTIFY_MARKER_DIR="" "$PING" 2>/dev/null; echo $?)" "1"
 unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
+
+# --- watcher: speaks PING markers when CC_NOTIFY_MARKER_SPEAK_PING is on ---
+WATCHER="$here/watch-and-notify.sh"
+mkdir -p "$T/fakes" "$T/fakes-nospeech"
+for c in spd-say notify-send; do
+    printf '#!/bin/bash\necho "%s: $*" >> "%s/calls"\n' "$c" "$T" > "$T/fakes/$c"
+    chmod +x "$T/fakes/$c"
+done
+cp "$T/fakes/notify-send" "$T/fakes-nospeech/"
+
+# Run the watcher on a fresh dir with $1 as speech setting and $2 as fake bin dir,
+# feed it a PING with a message, a bare PING and an AGENT_DONE; print spd-say calls.
+watch_run() {
+    local W="$T/w"; rm -rf "$W" "$T/calls"; mkdir -p "$W"
+    CC_NOTIFY_MARKER_WATCH_DIR="$W" CC_NOTIFY_MARKER_SPEAK_PING="$1" PATH="$2:$PATH" \
+        env -u BASH_ENV timeout 2 "$WATCHER" >/dev/null 2>&1 &
+    sleep 0.5
+    printf 's1\nbuild finished' > "$W/PING.a"; sleep 0.2
+    printf 's1' > "$W/PING.b"; sleep 0.2
+    printf 's1' > "$W/AGENT_DONE.c"; sleep 0.3
+    wait
+    grep -E '^spd-say|installed' "$T/calls" 2>/dev/null
+}
+ok "watcher speaks pings" "$(watch_run 1 "$T/fakes")" \
+    "$(printf 'spd-say: ping from s1: build finished\nspd-say: ping from s1')"
+ok "watcher silent by default" "$(watch_run "" "$T/fakes")" ""
+ok "watcher warns without speech" "$(watch_run 1 "$T/fakes-nospeech" | grep -c 'neither spd-say nor espeak-ng')" "1"
 
 echo "---"
 echo "passed=$pass failed=$fail"

@@ -58,6 +58,35 @@ marker_body() {
     printf '%s' "$body\n\nTimestamp: $(date --iso-8601=seconds)"
 }
 
+# Opt-in (CC_NOTIFY_MARKER_SPEAK_PING): speak PING markers aloud with the first
+# speech program found. Without one, warn once and only show the notification.
+speaker=""
+case "$(printf '%s' "${CC_NOTIFY_MARKER_SPEAK_PING:-}" | tr '[:upper:]' '[:lower:]')" in
+    '' | 0 | false | off | no) ;;
+    *)
+        for cmd in spd-say espeak-ng; do
+            if command -v "$cmd" &> /dev/null; then speaker="$cmd"; break; fi
+        done
+        if [ -n "$speaker" ]; then
+            echo "Speaking pings with $speaker."
+        else
+            warning="CC_NOTIFY_MARKER_SPEAK_PING is set, but neither spd-say nor espeak-ng is installed. Pings will not be spoken."
+            echo "$warning"
+            notify-send -t 15000 "Claude Code event handler" "$warning"
+        fi
+        ;;
+esac
+
+# Speak marker file $1 if it is a PING and speech is on.
+speak_ping() {
+    local text msg
+    [ -n "$speaker" ] && [ "$(marker_event "$(basename "$1")")" = PING ] || return 0
+    text="ping from $(marker_session "$1")"
+    msg=$(marker_message "$1")
+    [ -n "$msg" ] && text="$text: $msg"
+    "$speaker" "$text" &> /dev/null &
+}
+
 # Remove existing markers on startup
 echo "Watching marker directory: $CC_NOTIFY_MARKER_WATCH_DIR"
 remove_existing_markers
@@ -72,6 +101,7 @@ if command -v inotifywait &> /dev/null; then
         # Ignore dotfiles (e.g. .paused-sessions state) - not marker events.
         case "$filename" in .*) continue ;; esac
         notify-send -t 15000 "Claude Code event handler" "$(marker_body "$CC_NOTIFY_MARKER_WATCH_DIR/$file")"
+        speak_ping "$CC_NOTIFY_MARKER_WATCH_DIR/$file"
         rm "$CC_NOTIFY_MARKER_WATCH_DIR/$file"
     done
 else
@@ -82,6 +112,7 @@ else
             if [ -f "$file" ]; then
                 filename=$(basename "$file")
                 notify-send -t 15000 "Claude Code event handler" "$(marker_body "$file")"
+                speak_ping "$file"
                 rm "$file"
             fi
         done
