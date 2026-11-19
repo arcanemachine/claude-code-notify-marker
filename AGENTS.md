@@ -16,7 +16,7 @@ chmod +x bin/create-marker.sh bin/notify-marker-ping watch-and-notify.sh
 
 ## Commit Style
 
-Match existing commits:
-- `Add plugin manifest and Stop/Notification hooks`
-- `Update README with plugin installation instructions`
-- `Rename marker directory env var`
+Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<optional scope>): <description>`, e.g.
+- `feat(watcher): speak PING markers aloud`
+- `fix: read the session name after a rename`
+- `docs: update README for prompt-only notifications`
