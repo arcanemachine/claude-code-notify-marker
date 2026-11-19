@@ -170,7 +170,7 @@ A message longer than `CC_NOTIFY_MARKER_PING_MAX` characters (default `255`) is
 cut to that length, ending in `…`.
 
 To also hear pings, start the watcher with `CC_NOTIFY_MARKER_SPEAK_PING=1`. It
-says "ping from <session>: <message>" with `spd-say`, or `espeak-ng` if
+says "ping from <session> with message <message>" with `spd-say`, or `espeak-ng` if
 `spd-say` is missing. If neither is installed, the watcher says so at startup
 (in its output and as a notification) and shows pings without speech. Other
 events are never spoken.

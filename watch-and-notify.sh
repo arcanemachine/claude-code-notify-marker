@@ -83,7 +83,7 @@ speak_ping() {
     [ -n "$speaker" ] && [ "$(marker_event "$(basename "$1")")" = PING ] || return 0
     text="ping from $(marker_session "$1")"
     msg=$(marker_message "$1")
-    [ -n "$msg" ] && text="$text: $msg"
+    [ -n "$msg" ] && text="$text with message $msg"
     "$speaker" "$text" &> /dev/null &
 }
 

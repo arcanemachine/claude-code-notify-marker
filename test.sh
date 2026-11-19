@@ -174,7 +174,7 @@ watch_run() {
     grep -E '^spd-say|installed' "$T/calls" 2>/dev/null
 }
 ok "watcher speaks pings" "$(watch_run 1 "$T/fakes")" \
-    "$(printf 'spd-say: ping from s1: build finished\nspd-say: ping from s1')"
+    "$(printf 'spd-say: ping from s1 with message build finished\nspd-say: ping from s1')"
 ok "watcher silent by default" "$(watch_run "" "$T/fakes")" ""
 ok "watcher warns without speech" "$(watch_run 1 "$T/fakes-nospeech" | grep -c 'neither spd-say nor espeak-ng')" "1"
 
