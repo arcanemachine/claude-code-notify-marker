@@ -8,7 +8,8 @@
 # session silences routine "agent done" noise, not deliberate requests for the
 # user's attention. It still requires CC_NOTIFY_MARKER_DIR (opt-in).
 #
-# Usage: notify-marker-ping [message...]
+# Usage: notify-marker-ping [-q|--quiet] [message...]
+#        (quiet writes a PING_QUIET marker, which the watcher shows but never speaks)
 #        notify-marker-ping --max   (print the message length limit)
 #
 # Marker contents: line 1 = session label, line 2 = optional message. A message
@@ -35,6 +36,11 @@ if [ "$#" -eq 1 ] && [ "$1" = --max ]; then
     exit 0
 fi
 
+event=PING
+case "${1:-}" in
+    -q | --quiet) event=PING_QUIET; shift ;;
+esac
+
 dir="$(notify_marker_dir)" || {
     echo "notify-marker-ping: disabled (CC_NOTIFY_MARKER_DIR not set)" >&2
     exit 1
@@ -51,7 +57,7 @@ fi
 
 suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"
 mkdir -p "$dir" 2>/dev/null || exit 1
-marker="$dir/PING.${suffix}"
+marker="$dir/$event.${suffix}"
 if [ -n "$message" ]; then
     printf '%s\n%s' "$label" "$message" > "$marker" || exit 1
 else

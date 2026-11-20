@@ -181,6 +181,10 @@ events are never spoken.
 CC_NOTIFY_MARKER_SPEAK_PING=1 ./watch-and-notify.sh
 ```
 
+For a quiet ping (shown, never spoken), start the ping's instructions with
+`quiet`, `-q` or `--quiet`, e.g. `/notify-marker:ping quiet build done`. The
+script's `-q`/`--quiet` flag writes a `PING_QUIET` marker instead of `PING`.
+
 The script then waits up to `CC_NOTIFY_MARKER_PING_WAIT` seconds (default `2`)
 for the watcher to consume the marker. It prints `ping delivered` (exit 0), or
 `ping NOT picked up` (exit 3, marker removed) when no watcher is running, so the

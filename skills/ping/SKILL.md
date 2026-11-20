@@ -11,6 +11,8 @@ Message length limit: !`"${CLAUDE_PLUGIN_ROOT}/bin/notify-marker-ping" --max` ch
 the script has the final say.
 
 - No arguments: ping now with the message `ping`.
+- Quiet: if the instructions start with `quiet`, `-q` or `--quiet`, or ask for a quiet or silent ping, drop that word
+  and pass `--quiet` as the first argument, before the message. The ping is shown but not spoken.
 - Arguments: instructions for the ping (when, what it says). Follow them if clear; otherwise ask the user.
 - A delay: run `sleep <seconds>; <the command above>` as a background command (Bash `run_in_background`, not `&`), so the turn can end.
 - For the rest of the session, the user may ask you to ping them again (e.g. "ping me when done"); use the same command.

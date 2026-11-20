@@ -116,7 +116,7 @@ ok "stop marker has no message" "$(cat "$D"/AGENT_DONE.*)" "s1"
 rm -f "$D"/AGENT_DONE.* "$D"/NOTIFICATION.*
 
 # --- ping ignores pause state, carries an optional message, reports delivery ---
-rm -f "$D"/PING.* "$D/.paused-sessions" "$D/.active-sessions"
+rm -f "$D"/PING* "$D/.paused-sessions" "$D/.active-sessions"
 export CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1
 "$NM" pause >/dev/null
 
@@ -124,7 +124,7 @@ export CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT=1
 fake_watch() {
     local f
     for _ in $(seq 1 30); do
-        for f in "$D"/PING.*; do
+        for f in "$D"/PING*; do
             [ -e "$f" ] && { cp "$f" "$T/seen"; rm -f "$f"; return; }
         done
         sleep 0.1
@@ -159,6 +159,15 @@ ok "ping --max disabled" "$(CC_NOTIFY_MARKER_DIR="" "$PING" --max; echo $?)" "$(
 rm -f "$T/seen"; fake_watch & "$PING" --max please >/dev/null; wait
 ok "ping --max inside a message" "$(tail -n +2 "$T/seen")" "--max please"
 
+for q in -q --quiet; do
+    rm -f "$T/seen"; fake_watch & "$PING" "$q" "shh" >/dev/null; rc=$?; wait
+    ok "ping $q delivered" "$rc" "0"
+    ok "ping $q message" "$(tail -n +2 "$T/seen")" "shh"
+done
+fake_watch_name() { for _ in $(seq 1 30); do for f in "$D"/PING*; do [ -e "$f" ] && { basename "$f" | cut -d. -f1; rm -f "$f"; return; }; done; sleep 0.1; done; }
+ok "ping --quiet event" "$(fake_watch_name & "$PING" --quiet x >/dev/null; wait)" "PING_QUIET"
+ok "ping event"         "$(fake_watch_name & "$PING" x >/dev/null; wait)" "PING"
+
 ok "ping disabled fails" "$(CC_NOTIFY_MARKER_DIR="" "$PING" 2>/dev/null; echo $?)" "1"
 unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
 
@@ -172,7 +181,7 @@ done
 cp "$T/fakes/notify-send" "$T/fakes-nospeech/"
 
 # Run the watcher on a fresh dir with $1 as speech setting and $2 as fake bin dir,
-# feed it a PING with a message, a bare PING and an AGENT_DONE; print spd-say calls.
+# feed it a PING with a message, a bare PING, a PING_QUIET and an AGENT_DONE; print spd-say calls.
 watch_run() {
     local W="$T/w"; rm -rf "$W" "$T/calls"; mkdir -p "$W"
     CC_NOTIFY_MARKER_WATCH_DIR="$W" CC_NOTIFY_MARKER_SPEAK_PING="$1" PATH="$2:$PATH" \
@@ -180,6 +189,7 @@ watch_run() {
     sleep 0.5
     printf 's1\nbuild finished' > "$W/PING.a"; sleep 0.2
     printf 's1' > "$W/PING.b"; sleep 0.2
+    printf 's1\nshh' > "$W/PING_QUIET.c"; sleep 0.2
     printf 's1' > "$W/AGENT_DONE.c"; sleep 0.3
     wait
     grep -E '^spd-say|installed' "$T/calls" 2>/dev/null
