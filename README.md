@@ -167,7 +167,9 @@ notify-marker-ping "build finished"
 The marker's first line is the session label and the optional second line is
 the message; the watcher shows it as `Message:` in the notification.
 A message longer than `CC_NOTIFY_MARKER_PING_MAX` characters (default `255`) is
-cut to that length, ending in `…`.
+rejected: nothing is sent, and the script exits 2 with an error naming the limit,
+so the agent can shorten the message and try again. `notify-marker-ping --max` prints the
+limit; the skill reads it as it loads, so the agent knows it before writing.
 
 To also hear pings, start the watcher with `CC_NOTIFY_MARKER_SPEAK_PING=1`. It
 says "ping from <session> with message <message>" with `spd-say`, or `espeak-ng` if

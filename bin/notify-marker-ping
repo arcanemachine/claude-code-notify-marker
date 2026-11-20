@@ -9,18 +9,31 @@
 # user's attention. It still requires CC_NOTIFY_MARKER_DIR (opt-in).
 #
 # Usage: notify-marker-ping [message...]
+#        notify-marker-ping --max   (print the message length limit)
 #
-# Marker contents: line 1 = session label, line 2 = optional message, cut to
-# CC_NOTIFY_MARKER_PING_MAX characters (default 255) so a notification or a
-# spoken ping stays short.
+# Marker contents: line 1 = session label, line 2 = optional message. A message
+# over CC_NOTIFY_MARKER_PING_MAX characters (default 255) is rejected, so a
+# notification or a spoken ping stays short.
 #
 # After writing, waits up to CC_NOTIFY_MARKER_PING_WAIT seconds (default 2) for
 # the watcher to consume the marker, so the caller knows whether it was seen:
 #   exit 0 - delivered (watcher picked it up)
 #   exit 1 - disabled / could not write
+#   exit 2 - message too long; nothing sent
 #   exit 3 - not picked up (watcher likely not running); marker is removed
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+# Fall back to the default when the limit is not a positive integer.
+max="${CC_NOTIFY_MARKER_PING_MAX:-}"
+[[ "$max" =~ ^[1-9][0-9]*$ ]] || max=255
+
+# Before the enabled check: the skill reads this as it loads, and a failure
+# there aborts the skill.
+if [ "$#" -eq 1 ] && [ "$1" = --max ]; then
+    echo "$max"
+    exit 0
+fi
 
 dir="$(notify_marker_dir)" || {
     echo "notify-marker-ping: disabled (CC_NOTIFY_MARKER_DIR not set)" >&2
@@ -31,10 +44,9 @@ sid="${CLAUDE_CODE_SESSION_ID:-}"
 label="$(notify_marker_session_name)"
 label="${label:-$sid}"
 message="$*"
-max="${CC_NOTIFY_MARKER_PING_MAX:-255}"
 if [ "${#message}" -gt "$max" ]; then
-    message="${message:0:max-1}…"
-    echo "notify-marker: message cut to $max characters"
+    echo "notify-marker-ping: message is ${#message} characters, over the limit of $max; not sent" >&2
+    exit 2
 fi
 
 suffix="$$.$(date +%s%N 2>/dev/null || echo "$RANDOM")"

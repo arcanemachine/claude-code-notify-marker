@@ -31,7 +31,7 @@ emitted() { # $1 event -> "yes"/"no"
 }
 
 # --- Gate 1: opt-in (CC_NOTIFY_MARKER_DIR) ---
-unset CC_NOTIFY_MARKER_DIR
+unset CC_NOTIFY_MARKER_DIR CC_NOTIFY_MARKER_PING_MAX
 D="$T/d"; mkdir -p "$D"
 CLAUDE_CODE_SESSION_ID=s1 CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT="" \
     bash -c '"'"$CM"'" AGENT_DONE' 2>/dev/null
@@ -143,10 +143,21 @@ CC_NOTIFY_MARKER_PING_WAIT=0.3 "$PING" "nobody home" >/dev/null; rc=$?
 ok "ping undelivered exit"    "$rc" "3"
 ok "ping undelivered cleaned" "$(nfiles "$D/PING")" "0"
 
-long=$(printf 'é%.0s' $(seq 1 300))
-rm -f "$T/seen"; fake_watch & "$PING" "$long" >/dev/null; wait
-ok "ping message capped" "$(tail -n +2 "$T/seen" | wc -m | tr -d ' ')" "255"
-ok "ping cap marks the cut" "$(tail -n +2 "$T/seen" | tail -c 3)" "…"
+at_max=$(printf 'é%.0s' $(seq 1 255))
+rm -f "$T/seen"; fake_watch & "$PING" "$at_max" >/dev/null; rc=$?; wait
+ok "ping at the limit delivered" "$rc" "0"
+ok "ping at the limit intact" "$(tail -n +2 "$T/seen")" "$at_max"
+
+"$PING" "${at_max}é" 2>/dev/null; rc=$?
+ok "ping over the limit rejected" "$rc" "2"
+ok "ping over the limit not sent" "$(nfiles "$D/PING")" "0"
+
+ok "ping --max default" "$("$PING" --max)" "255"
+ok "ping --max set"     "$(CC_NOTIFY_MARKER_PING_MAX=64 "$PING" --max)" "64"
+ok "ping --max invalid" "$(CC_NOTIFY_MARKER_PING_MAX=abc "$PING" --max)" "255"
+ok "ping --max disabled" "$(CC_NOTIFY_MARKER_DIR="" "$PING" --max; echo $?)" "$(printf '255\n0')"
+rm -f "$T/seen"; fake_watch & "$PING" --max please >/dev/null; wait
+ok "ping --max inside a message" "$(tail -n +2 "$T/seen")" "--max please"
 
 ok "ping disabled fails" "$(CC_NOTIFY_MARKER_DIR="" "$PING" 2>/dev/null; echo $?)" "1"
 unset CC_NOTIFY_MARKER_PAUSED_BY_DEFAULT
